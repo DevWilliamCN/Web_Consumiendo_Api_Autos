@@ -1,10 +1,9 @@
 import os
 import requests
 import pandas as pd
-import json
 from recomendador import recomendar_autos
 
-API_KEY = "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"
+# Cargar datos desde la API de autos
 BASE_URL = "https://api-william.datapiwilliam.workers.dev/api/autos"
 
 def cargar_datos():
@@ -13,11 +12,16 @@ def cargar_datos():
         if r.status_code == 200:
             return pd.DataFrame(r.json())
         return pd.DataFrame()
-    except:
+    except Exception:
         return pd.DataFrame()
 
+# Función principal del chatbot con OpenRouter
 def chatbot_ia(pregunta_usuario):
     try:
+        api_key = os.getenv("OPENROUTER_API_KEY")
+        if not api_key:
+            return "❌ Falta configurar OPENROUTER_API_KEY en los secretos."
+
         prompt = f"""
 Sos un asistente experto en autos. Con esta pregunta del usuario:
 
@@ -35,34 +39,39 @@ respondé solamente con una de estas instrucciones en formato JSON:
 {{ "accion": "desconocido" }}
 """
 
-        url = "https://openrouter.ai/api/v1/chat/completions"
         headers = {
-            "Authorization": f"Bearer {API_KEY}",
+            "Authorization": f"Bearer {api_key}",
             "Content-Type": "application/json"
         }
 
         body = {
-            "model": "mistralai/mistral-7b-instruct:free",
+            "model": "mistralai/mistral-7b-instruct:free",  # Gratis
             "messages": [
                 {"role": "system", "content": "Respondé con JSON válido según lo solicitado."},
                 {"role": "user", "content": prompt}
             ]
         }
 
-        res = requests.post(url, json=body, headers=headers)
-        contenido = res.json()["choices"][0]["message"]["content"].strip()
+        response = requests.post("https://openrouter.ai/api/v1/chat/completions", headers=headers, json=body)
+        json_resultado = response.json()
 
-        instruccion = json.loads(contenido)
+        if "choices" not in json_resultado:
+            return f"❌ Error: Respuesta inválida del modelo IA.\n\n{json_resultado}"
+
+        contenido = json_resultado["choices"][0]["message"]["content"].strip()
+
+        # Evalúa el contenido como un diccionario
+        instruccion = eval(contenido)
         df = cargar_datos()
 
         if df.empty:
             return "❌ No se pudieron cargar los datos."
 
         if instruccion["accion"] == "buscar":
-            marca = instruccion["params"]["marca"]
+            marca = instruccion["params"].get("marca", "")
             filtrado = df[df["marca"].str.lower() == marca.lower()]
             if filtrado.empty:
-                return "⚠️ No se encontraron autos para esa marca."
+                return f"⚠️ No se encontraron autos para la marca '{marca}'."
             return filtrado.head(5).to_markdown(index=False)
 
         if instruccion["accion"] == "preferencia":
