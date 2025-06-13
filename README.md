@@ -74,7 +74,24 @@ Podés publicarla fácilmente en [Streamlit Cloud](https://streamlit.io/cloud):
 
 ## 📸 Captura
 
-![Vista previa](https://via.placeholder.com/800x400.png?text=Vista+previa+de+la+aplicaci%C3%B3n)
+![Inicio](cap1.jpg)
+
+### 📊 Gráficas interactivas
+
+![Gráficas](cap2.jpg)
+
+### 🧠 Recomendador inteligente
+
+![Recomendador](cap3.jpg)
+
+### 💬 Chat con IA (natural language)
+
+![Chat con IA](cap4.jpg)
+
+### 📥 Exportar a Excel
+
+![Exportar](cap5.jpg)
+
 
 ---
 
