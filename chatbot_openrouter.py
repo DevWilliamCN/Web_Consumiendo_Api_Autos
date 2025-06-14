@@ -3,7 +3,7 @@ import requests
 import pandas as pd
 from recomendador import recomendar_autos
 
-# Cargar datos desde la API de autos
+# API externa con datos de autos
 BASE_URL = "https://api-william.datapiwilliam.workers.dev/api/autos"
 
 def cargar_datos():
@@ -15,12 +15,17 @@ def cargar_datos():
     except Exception:
         return pd.DataFrame()
 
-# Función principal del chatbot con OpenRouter
+# Chatbot con integración a OpenRouter
 def chatbot_ia(pregunta_usuario):
     try:
         api_key = os.getenv("OPENROUTER_API_KEY")
         if not api_key:
-            return "❌ Falta configurar OPENROUTER_API_KEY en los secretos."
+            return "❌ Falta configurar OPENROUTER_API_KEY en los secrets de Streamlit."
+
+        headers = {
+            "Authorization": f"Bearer {api_key}",
+            "Content-Type": "application/json"
+        }
 
         prompt = f"""
 Sos un asistente experto en autos. Con esta pregunta del usuario:
@@ -39,11 +44,6 @@ respondé solamente con una de estas instrucciones en formato JSON:
 {{ "accion": "desconocido" }}
 """
 
-        headers = {
-            "Authorization": f"Bearer {api_key}",
-            "Content-Type": "application/json"
-        }
-
         body = {
             "model": "mistralai/mistral-7b-instruct:free",  # Gratis
             "messages": [
@@ -53,19 +53,22 @@ respondé solamente con una de estas instrucciones en formato JSON:
         }
 
         response = requests.post("https://openrouter.ai/api/v1/chat/completions", headers=headers, json=body)
-        json_resultado = response.json()
+        data = response.json()
 
-        if "choices" not in json_resultado:
-            return f"❌ Error: Respuesta inválida del modelo IA.\n\n{json_resultado}"
+        if response.status_code != 200 or "choices" not in data:
+            msg = data.get("error", {}).get("message", "Respuesta inválida")
+            return f"❌ Error {response.status_code}: {msg}"
 
-        contenido = json_resultado["choices"][0]["message"]["content"].strip()
+        contenido = data["choices"][0]["message"]["content"].strip()
 
-        # Evalúa el contenido como un diccionario
-        instruccion = eval(contenido)
+        try:
+            instruccion = eval(contenido)
+        except:
+            return f"❌ La respuesta no fue un JSON válido:\n\n{contenido}"
+
         df = cargar_datos()
-
         if df.empty:
-            return "❌ No se pudieron cargar los datos."
+            return "⚠️ No se pudieron cargar los datos de autos."
 
         if instruccion["accion"] == "buscar":
             marca = instruccion["params"].get("marca", "")
@@ -82,4 +85,4 @@ respondé solamente con una de estas instrucciones en formato JSON:
         return "🤖 No logré entender tu consulta."
 
     except Exception as e:
-        return f"❌ Error: {e}"
+        return f"❌ Error inesperado: {e}"
