@@ -20,41 +20,44 @@ def chatbot_ia(pregunta_usuario):
     try:
         api_key = os.getenv("OPENROUTER_API_KEY") or st.secrets.get("OPENROUTER_API_KEY", None)
         if not api_key:
-            return "\u274c Falta configurar OPENROUTER_API_KEY en los secrets de Streamlit."
+            return "❌ Falta configurar OPENROUTER_API_KEY en los secrets de Streamlit."
 
+        # 🔧 Prompt mejorado con lógica clara
         prompt = f"""
-Sos un asistente inteligente experto en autos. El usuario puede escribir frases como:
-- \"Quiero un carro barato\"
-- \"Un auto que rinda bastante\"
-- \"Mu\u00e9strame los m\u00e1s nuevos\"
-- \"Cu\u00e1l es el carro m\u00e1s caro\"
-- \"Busco algo reciente y con buen rendimiento\"
-- \"Un veh\u00edculo que sea rendidor y econ\u00f3mico\"
-- \"Recomendame una marca buena\"
-- \"Busco carro familiar que no gaste mucha gasolina\"
-- \"Quiero una nave que consuma poco\"
-- \"Necesito algo confiable y que no gaste tanto\"
-- \"Mu\u00e9strame autos 2020 en adelante\"
+Sos un asistente experto en autos. El usuario puede escribir de forma coloquial o en distintos idiomas.
 
-Tambi\u00e9n puede usar otros idiomas como:
-- \"Show me the cheapest cars\"
-- \"I want a fuel-efficient car\"
-- \"Voiture \u00e9conomique\"
-- \"Quero um carro econ\u00f4mico\"
-- \"Ich suche ein g\u00fcnstiges Auto\"
-
-Interpret\u00e1 la intenci\u00f3n y devolv\u00e9 SOLO un JSON con una de estas estructuras:
+Tu tarea es interpretar la intención y devolver exactamente uno de estos tres formatos en JSON:
 
 1. Buscar por marca:
 {{ "accion": "buscar", "params": {{ "marca": "Toyota" }} }}
 
-2. Recomendaci\u00f3n por preferencia:
-{{ "accion": "preferencia", "preferencia": "econ\u00f3mico" }}
+2. Recomendación por preferencia:
+{{ "accion": "preferencia", "preferencia": "económico" }}
 
-3. Si no entend\u00e9s:
+3. Si no entendés:
 {{ "accion": "desconocido" }}
 
-Frase del usuario: \"{pregunta_usuario}\"
+---
+
+Ejemplos de frases que indican una **preferencia**:
+- "Quiero un carro barato"
+- "Muéstrame los más nuevos"
+- "Autos económicos"
+- "Show me the cheapest cars"
+- "I want a fuel-efficient car"
+- "Voiture économique"
+- "Ich suche ein günstiges Auto"
+
+Ejemplos que indican una **marca**:
+- "Toyota"
+- "Muéstrame autos de Ford"
+- "Quiero un Honda"
+
+Ejemplos que no tienen sentido:
+- "🍕"
+- "asdfasdf"
+
+Frase del usuario: "{pregunta_usuario}"
 """
 
         headers = {
@@ -65,8 +68,14 @@ Frase del usuario: \"{pregunta_usuario}\"
         body = {
             "model": "mistralai/mistral-7b-instruct:free",
             "messages": [
-                {"role": "system", "content": "Respond\u00e9 solamente con JSON v\u00e1lido seg\u00fan el formato especificado."},
-                {"role": "user", "content": prompt}
+                {
+                    "role": "system",
+                    "content": "Respondé SOLO con JSON válido según el formato indicado. Nada más."
+                },
+                {
+                    "role": "user",
+                    "content": prompt
+                }
             ]
         }
 
@@ -74,39 +83,39 @@ Frase del usuario: \"{pregunta_usuario}\"
         data = response.json()
 
         if response.status_code != 200 or "choices" not in data:
-            msg = data.get("error", {}).get("message", "Respuesta inv\u00e1lida")
-            return f"\u274c Error {response.status_code}: {msg}"
+            msg = data.get("error", {}).get("message", "Respuesta inválida")
+            return f"❌ Error {response.status_code}: {msg}"
 
         contenido = data["choices"][0]["message"]["content"].strip()
 
         try:
             instruccion = eval(contenido)
         except:
-            return f"\u274c La respuesta del modelo no fue un JSON v\u00e1lido:\n\n{contenido}"
+            return f"❌ La respuesta del modelo no fue un JSON válido:\n\n{contenido}"
 
         df = cargar_datos()
         if df.empty:
-            return "\u26a0\ufe0f No se pudieron cargar los datos de autos."
+            return "⚠️ No se pudieron cargar los datos de autos."
 
         if instruccion["accion"] == "buscar":
             marca = instruccion["params"].get("marca", "").strip()
             if not marca:
-                return "\u26a0\ufe0f No se indic\u00f3 una marca v\u00e1lida para buscar autos."
+                return "⚠️ No se indicó una marca válida para buscar autos."
             filtrado = df[df["marca"].str.lower() == marca.lower()]
             if filtrado.empty:
-                return f"\u26a0\ufe0f No se encontraron autos para la marca '{marca}'."
+                return f"⚠️ No se encontraron autos para la marca '{marca}'."
             return filtrado.head(5).to_markdown(index=False)
 
         if instruccion["accion"] == "preferencia":
             preferencia = instruccion.get("preferencia", "").strip()
             if not preferencia:
-                return "\u26a0\ufe0f No se indic\u00f3 una preferencia v\u00e1lida."
+                return "⚠️ No se indicó una preferencia válida."
             recomendados = recomendar_autos(df, preferencia)
             if recomendados.empty:
-                return f"\u26a0\ufe0f No se encontraron autos para la preferencia '{preferencia}'."
+                return f"⚠️ No se encontraron autos para la preferencia '{preferencia}'."
             return recomendados.to_markdown(index=False)
 
-        return "\ud83e\udd16 No logre entender tu consulta."
+        return "🤖 No logré entender tu consulta."
 
     except Exception as e:
-        return f"\u274c Error inesperado: {e}"
+        return f"❌ Error inesperado: {e}"
