@@ -4,7 +4,6 @@ import requests
 import pandas as pd
 from recomendador import recomendar_autos
 
-# URL de la API con los autos
 BASE_URL = "https://api-william.datapiwilliam.workers.dev/api/autos"
 
 def cargar_datos():
@@ -22,44 +21,45 @@ def chatbot_ia(pregunta_usuario):
         if not api_key:
             return "❌ Falta configurar OPENROUTER_API_KEY en los secrets de Streamlit."
 
-        # PROMPT MEJORADO
+        # Prompt optimizado con contexto de palabras clave
         prompt = f"""
-Sos un asistente experto en autos. El usuario puede escribir de forma coloquial, profesional o en distintos idiomas.
-
-Tu tarea es interpretar su intención y devolver exactamente uno de estos tres formatos en JSON:
+Sos un asistente experto en automóviles. El usuario puede escribir frases en español, inglés u otros idiomas.
+Tu tarea es identificar la intención de su frase y responder únicamente con uno de estos JSON:
 
 1. Buscar por marca:
 {{ "accion": "buscar", "params": {{ "marca": "Toyota" }} }}
 
-2. Recomendación por preferencia:
+2. Recomendación por preferencia (rendimiento, precio, año, etc.):
 {{ "accion": "preferencia", "preferencia": "económico" }}
 
-3. Si no entendés:
+3. No entendiste la intención:
 {{ "accion": "desconocido" }}
 
----
+🔎 Algunas frases que deberías entender y su clasificación esperada:
 
-Ejemplos de frases que indican una preferencia:
-- "Quiero un carro barato"
-- "Muéstrame los más nuevos"
-- "Autos económicos"
-- "Busco algo reciente y con buen rendimiento"
-- "Una nave buena"
-- "Quiero una nave"
-- "Un carro que rinda bastante"
-- "Busco un vehículo rendidor"
-- "Muéstrame carros 2020 en adelante"
-- "Recomendame algo potente pero económico"
-- "Un auto bonito y rápido"
-- "Algo cómodo y con poco consumo"
+Frases de preferencia:
+- "carros baratos"
+- "una nave"
+- "vehículo potente"
+- "autos nuevos"
+- "bajo consumo"
+- "rendidor"
+- "económico"
+- "que no gaste gasolina"
+- "bonito y barato"
+- "show me cheap cars"
+- "quiero algo familiar"
+- "quiero algo rápido"
+- "quiero algo que rinda bastante"
 
-Frases multilingües que también podés entender:
-- "Show me the cheapest cars"
-- "I want a fuel-efficient car"
-- "Voiture économique"
-- "Quero um carro econômico"
-- "Ich suche ein günstiges Auto"
-- "Autos nuevos con buen puntaje"
+Frases de marca:
+- "Toyota"
+- "Ford"
+- "Kia"
+- "Honda"
+- "Volkswagen"
+
+No respondas nada más que el JSON correspondiente.
 
 Frase del usuario: "{pregunta_usuario}"
 """
@@ -72,7 +72,7 @@ Frase del usuario: "{pregunta_usuario}"
         body = {
             "model": "mistralai/mistral-7b-instruct:free",
             "messages": [
-                {"role": "system", "content": "Respondé solamente con JSON válido según el formato especificado."},
+                {"role": "system", "content": "Respondé solamente con un JSON válido según el formato especificado."},
                 {"role": "user", "content": prompt}
             ]
         }
