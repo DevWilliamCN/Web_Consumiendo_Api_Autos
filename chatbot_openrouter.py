@@ -22,11 +22,11 @@ def chatbot_ia(pregunta_usuario):
         if not api_key:
             return "❌ Falta configurar OPENROUTER_API_KEY en los secrets de Streamlit."
 
-        # 🔧 Prompt mejorado con lógica clara
+        # PROMPT MEJORADO
         prompt = f"""
-Sos un asistente experto en autos. El usuario puede escribir de forma coloquial o en distintos idiomas.
+Sos un asistente experto en autos. El usuario puede escribir de forma coloquial, profesional o en distintos idiomas.
 
-Tu tarea es interpretar la intención y devolver exactamente uno de estos tres formatos en JSON:
+Tu tarea es interpretar su intención y devolver exactamente uno de estos tres formatos en JSON:
 
 1. Buscar por marca:
 {{ "accion": "buscar", "params": {{ "marca": "Toyota" }} }}
@@ -39,23 +39,27 @@ Tu tarea es interpretar la intención y devolver exactamente uno de estos tres f
 
 ---
 
-Ejemplos de frases que indican una **preferencia**:
+Ejemplos de frases que indican una preferencia:
 - "Quiero un carro barato"
 - "Muéstrame los más nuevos"
 - "Autos económicos"
+- "Busco algo reciente y con buen rendimiento"
+- "Una nave buena"
+- "Quiero una nave"
+- "Un carro que rinda bastante"
+- "Busco un vehículo rendidor"
+- "Muéstrame carros 2020 en adelante"
+- "Recomendame algo potente pero económico"
+- "Un auto bonito y rápido"
+- "Algo cómodo y con poco consumo"
+
+Frases multilingües que también podés entender:
 - "Show me the cheapest cars"
 - "I want a fuel-efficient car"
 - "Voiture économique"
+- "Quero um carro econômico"
 - "Ich suche ein günstiges Auto"
-
-Ejemplos que indican una **marca**:
-- "Toyota"
-- "Muéstrame autos de Ford"
-- "Quiero un Honda"
-
-Ejemplos que no tienen sentido:
-- "🍕"
-- "asdfasdf"
+- "Autos nuevos con buen puntaje"
 
 Frase del usuario: "{pregunta_usuario}"
 """
@@ -68,14 +72,8 @@ Frase del usuario: "{pregunta_usuario}"
         body = {
             "model": "mistralai/mistral-7b-instruct:free",
             "messages": [
-                {
-                    "role": "system",
-                    "content": "Respondé SOLO con JSON válido según el formato indicado. Nada más."
-                },
-                {
-                    "role": "user",
-                    "content": prompt
-                }
+                {"role": "system", "content": "Respondé solamente con JSON válido según el formato especificado."},
+                {"role": "user", "content": prompt}
             ]
         }
 
